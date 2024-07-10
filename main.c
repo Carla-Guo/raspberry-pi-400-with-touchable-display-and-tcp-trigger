@@ -14,10 +14,24 @@
 #include "lvgl/lvgl.h"
 #include "lv_drivers/sdl/sdl.h"
 #include "ui/ui.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef __arm__ // 编译时检测是否为ARM架构，即树莓派
+#include <pigpio.h>
+#endif
+
 
 /*********************
  *      DEFINES
  *********************/
+
+#ifdef __arm__
+#define UART_DEVICE "/dev/serial0"
+#define BAUD_RATE 9600
+volatile int uart_fd;
+#endif
 
 /**********************
  *      TYPEDEFS
@@ -51,6 +65,109 @@ static void hal_init(void);
 /**********************
  *      VARIABLES
  **********************/
+ 
+const char *random_values[100] = {
+    "Reading is to the mind what exercise is to the body. - Joseph Addison",
+    "A room without books is like a body without a soul. - Marcus Tullius Cicero",
+    "The more that you read, the more things you will know. The more that you learn, the more places you'll go. - Dr. Seuss",
+    "Books are a uniquely portable magic. - Stephen King",
+    "Reading is an adventure in living. - Clifton Fadiman",
+    "The journey of a lifetime starts with the turning of a page. - Rachel Anders",
+    "There is no friend as loyal as a book. - Ernest Hemingway",
+    "Books are the mirrors of the soul. - Virginia Woolf",
+    "Reading is dreaming with open eyes. - Unknown",
+    "Books are a uniquely portable magic. - Stephen King",
+    "So many books, so little time. - Frank Zappa",
+    "A book is a gift you can open again and again. - Garrison Keillor",
+    "A book is a dream that you hold in your hand. - Neil Gaiman",
+    "The only thing you absolutely have to know is the location of the library. - Albert Einstein",
+    "A good book is an event in my life. - Stendhal",
+    "Reading is a discount ticket to everywhere. - Mary Schmich",
+    "Books can be dangerous. The best ones should be labeled 'This could change your life.' - Helen Exley",
+    "Today a reader, tomorrow a leader. - Margaret Fuller",
+    "A reader lives a thousand lives before he dies. The man who never reads lives only one. - George R.R. Martin",
+    "Books are the quietest and most constant of friends. - Charles William Eliot",
+    "Reading is a way for me to expand my mind, open my eyes, and fill up my heart. - Oprah Winfrey",
+    "Books are the plane, and the train, and the road. They are the destination, and the journey. They are home. - Anna Quindlen",
+    "Books wash away from the soul the dust of everyday life. - Unknown",
+    "We read to know we're not alone. - William Nicholson",
+    "Reading brings us unknown friends. - Honoré de Balzac",
+    "A book is like a garden carried in the pocket. - Chinese Proverb",
+    "Books are the treasured wealth of the world and the fit inheritance of generations and nations. - Henry David Thoreau",
+    "Reading is a basic tool in the living of a good life. - Mortimer J. Adler",
+    "Books serve to show a man that those original thoughts of his aren't very new after all. - Abraham Lincoln",
+    "Reading is a window to the world. - Lynn Butler",
+    "Books are the training weights of the mind. - Epictetus",
+    "Reading is a conversation. All books talk. But a good book listens as well. - Mark Haddon",
+    "Books are my friends, my companions. They make me laugh and cry and find meaning in life. - Christopher Paolini",
+    "The book to read is not the one that thinks for you but the one which makes you think. - Harper Lee",
+    "Reading is a sanctuary where the soul finds peace. - Unknown",
+    "Books are the gateway to wisdom and knowledge. - Unknown",
+    "A great book should leave you with many experiences, and slightly exhausted at the end. You live several lives while reading. - William Styron",
+    "Reading gives us someplace to go when we have to stay where we are. - Mason Cooley",
+    "Books open your mind, broaden your mind, and strengthen you as nothing else can. - William Feather",
+    "Reading is the key to knowledge. - Unknown",
+    "Books are a treasure trove of knowledge and wisdom. - Unknown",
+    "There is more treasure in books than in all the pirate's loot on Treasure Island. - Walt Disney",
+    "A book is a device to ignite the imagination. - Alan Bennett",
+    "Reading makes immigrants of us all. It takes us away from home, but more important, it finds homes for us everywhere. - Jean Rhys",
+    "Books are the compasses and telescopes and sextants and charts which other men have prepared to help us navigate the dangerous seas of human life. - Jesse Lee Bennett",
+    "Reading gives us a place to go when we have to stay where we are. - Mason Cooley",
+    "Books are the bees which carry the quickening pollen from one to another mind. - James Russell Lowell",
+    "Reading is to the mind what food is to the body. - Unknown",
+    "Books are the greatest invention of the human race. - Barbara Tuchman",
+    "Reading allows us to see the world through the eyes of others. - Unknown",
+    "Books are a source of wisdom and enlightenment. - Unknown",
+    "Reading is the gateway skill that makes all other learning possible. - Barack Obama",
+    "Books are the mirrors of the soul. - Virginia Woolf",
+    "Reading brings us unknown friends. - Honoré de Balzac",
+    "Books are the ultimate Dumpees: put them down and they’ll wait for you forever; pay attention to them and they always love you back. - John Green",
+    "Reading is a discount ticket to everywhere. - Mary Schmich",
+    "Books can be dangerous. The best ones should be labeled 'This could change your life.' - Helen Exley",
+    "Today a reader, tomorrow a leader. - Margaret Fuller",
+    "A reader lives a thousand lives before he dies. The man who never reads lives only one. - George R.R. Martin",
+    "Books are the quietest and most constant of friends. - Charles William Eliot",
+    "Reading is a way for me to expand my mind, open my eyes, and fill up my heart. - Oprah Winfrey",
+    "Books are the plane, and the train, and the road. They are the destination, and the journey. They are home. - Anna Quindlen",
+    "Books wash away from the soul the dust of everyday life. - Unknown",
+    "We read to know we're not alone. - William Nicholson",
+    "Reading brings us unknown friends. - Honoré de Balzac",
+    "A book is like a garden carried in the pocket. - Chinese Proverb",
+    "Books are the treasured wealth of the world and the fit inheritance of generations and nations. - Henry David Thoreau",
+    "Reading is a basic tool in the living of a good life. - Mortimer J. Adler",
+    "Books serve to show a man that those original thoughts of his aren't very new after all. - Abraham Lincoln",
+    "Reading is a window to the world. - Lynn Butler",
+    "Books are the training weights of the mind. - Epictetus",
+    "Reading is a conversation. All books talk. But a good book listens as well. - Mark Haddon",
+    "Books are my friends, my companions. They make me laugh and cry and find meaning in life. - Christopher Paolini",
+    "The book to read is not the one that thinks for you but the one which makes you think. - Harper Lee",
+    "Reading is a sanctuary where the soul finds peace. - Unknown",
+    "Books are the gateway to wisdom and knowledge. - Unknown",
+    "A great book should leave you with many experiences, and slightly exhausted at the end. You live several lives while reading. - William Styron",
+    "Reading gives us someplace to go when we have to stay where we are. - Mason Cooley",
+    "Books open your mind, broaden your mind, and strengthen you as nothing else can. - William Feather",
+    "Reading is the key to knowledge. - Unknown",
+    "Books are a treasure trove of knowledge and wisdom. - Unknown",
+    "There is more treasure in books than in all the pirate's loot on Treasure Island. - Walt Disney",
+    "A book is a device to ignite the imagination. - Alan Bennett",
+    "Reading makes immigrants of us all. It takes us away from home, but more important, it finds homes for us everywhere. - Jean Rhys",
+    "Books are the compasses and telescopes and sextants and charts which other men have prepared to help us navigate the dangerous seas of human life. - Jesse Lee Bennett",
+    "Reading gives us a place to go when we have to stay where we are. - Mason Cooley",
+    "Books are the bees which carry the quickening pollen from one to another mind. - James Russell Lowell",
+    "Reading is to the mind what food is to the body. - Unknown",
+    "Books are the greatest invention of the human race. - Barbara Tuchman",
+    "Reading allows us to see the world through the eyes of others. - Unknown",
+    "Books are a source of wisdom and enlightenment. - Unknown",
+    "Reading is the gateway skill that makes all other learning possible. - Barack Obama",
+    "Books are the mirrors of the soul. - Virginia Woolf",
+    "Reading brings us unknown friends. - Honoré de Balzac",
+    "Books are the ultimate Dumpees: put them down and they’ll wait for you forever; pay attention to them and they always love you back. - John Green",
+    "Reading is a discount ticket to everywhere. - Mary Schmich",
+    "Books can be dangerous. The best ones should be labeled 'This could change your life.' - Helen Exley",
+    "Today a reader, tomorrow a leader. - Margaret Fuller",
+    "A reader lives a thousand lives before he dies. The man who never reads lives only one. - George R.R. Martin",
+    "Books are the quietest and most constant of friends. - Charles William Eliot"
+};
 
 /**********************
  *  STATIC PROTOTYPES
@@ -59,6 +176,83 @@ static void hal_init(void);
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
+
+int get_random_index() {
+    return rand() % 100;
+}
+
+
+void play_animations() {
+
+    // Get two random values from the array
+    int random_index1 = get_random_index();
+    int random_index2 = get_random_index();
+    const char *random_value1 = random_values[random_index1];
+    //const char *random_value2 = random_values[random_index2];
+
+    // Update the text area with the first random value
+    lv_textarea_set_text(ui_Textarera, random_value1);
+    // Update thw image with emoj3
+    lv_img_set_src(ui_Image1, &ui_img_emoj3_png);
+    // Run animation1
+    word_Animation(ui_Screen1,0);
+
+    // Check if the values match
+    if (random_index1 == random_index2) {
+      
+      // Update the image with the emoj2
+      lv_img_set_src(ui_Image1, &ui_img_emoj2_png);
+      lv_textarea_set_text(ui_Textarera, "\nCELEBRATIONS!");
+      // Run animation2
+      emoji_Animation(ui_Image1,0);
+    }
+
+
+    usleep(5000000);
+    // Restore the text area and the image
+    lv_textarea_set_text(ui_Textarera, "\nPRESS IT!");
+    lv_img_set_src(ui_Image1, &ui_img_emoj1_png);
+}
+
+#ifdef __arm__
+void uart_interrupt() {
+    char received[13];
+    int i = 0;
+
+    if (gpioInitialise() < 0) {
+        fprintf(stderr, "pigpio initialization failed\n");
+        return;
+    }
+
+    uart_fd = serOpen(UART_DEVICE, BAUD_RATE, 0);
+    if (uart_fd < 0) {
+        fprintf(stderr, "Unable to open UART device: %s\n", strerror(errno));
+        gpioTerminate();
+        return;
+    }
+
+    memset(received, 0, sizeof(received));
+
+    while (1) {
+        if (serDataAvailable(uart_fd)) {
+            char ch = serReadByte(uart_fd);
+            if (ch == ' ') continue;
+            received[i++] = ch;
+
+            if (i == 12) {
+                if (strcmp(received, "000000010011") == 0) {
+                    play_animations();
+                }
+                i = 0;
+                memset(received, 0, sizeof(received));
+            }
+        }
+    }
+
+    serClose(uart_fd);
+    gpioTerminate();
+}
+#endif
 
 int main(int argc, char **argv)
 {
@@ -72,6 +266,10 @@ int main(int argc, char **argv)
   hal_init();
 
   ui_init();
+
+  #ifdef __arm__
+  uart_interrupt();
+  #endif
 
   while(1) {
       /* Periodically call the lv_task handler.
