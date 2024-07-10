@@ -1,0 +1,1 @@
+C:\PROGRA~2\ARMGNU~1\125863~1.3RE\bin\AA8B16~1.EXE -g @CMakeFiles\SquareLine_Project.dir\objects1.rsp -o SquareLine_Project  -L"D:/Carla/Probation period/book-cornor/SquareLine_Project/sdl2-dev-rpi64/lib" -lSDL2 

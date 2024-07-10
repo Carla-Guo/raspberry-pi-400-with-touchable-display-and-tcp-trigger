@@ -1,0 +1,3 @@
+D:/Carla/Probation period/book-cornor/SquareLine_Project/build/CMakeFiles/SquareLine_Project.dir
+D:/Carla/Probation period/book-cornor/SquareLine_Project/build/CMakeFiles/edit_cache.dir
+D:/Carla/Probation period/book-cornor/SquareLine_Project/build/CMakeFiles/rebuild_cache.dir
