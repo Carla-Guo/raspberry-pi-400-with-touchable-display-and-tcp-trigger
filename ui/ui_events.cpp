@@ -5,12 +5,17 @@
 
 #include "ui.h"
 
+extern int tcpclient(const char * text);
+
+
 void borrow_pressed(lv_event_t * e)
 {
 	// Your code here
+	  tcpclient("borrow button is pressed!");
 }
 
 void return_pressed(lv_event_t * e)
 {
 	// Your code here
+	  tcpclient("return button is pressed!");
 }

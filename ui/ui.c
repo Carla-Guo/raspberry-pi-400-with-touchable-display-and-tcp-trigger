@@ -32,6 +32,7 @@ const lv_img_dsc_t * ui_imgset_emoj[3] = {&ui_img_emoj1_png, &ui_img_emoj2_png, 
 #endif
 
 ///////////////////// ANIMATIONS ////////////////////
+//中奖表情动画
 void emoji_Animation(lv_obj_t * TargetObject, int delay)
 {
     ui_anim_user_data_t * PropertyAnimation_0_user_data = lv_mem_alloc(sizeof(ui_anim_user_data_t));
@@ -74,6 +75,7 @@ void emoji_Animation(lv_obj_t * TargetObject, int delay)
     lv_anim_start(&PropertyAnimation_1);
 
 }
+//鸡汤语录动画
 void word_Animation(lv_obj_t * TargetObject, int delay)
 {
     ui_anim_user_data_t * PropertyAnimation_0_user_data = lv_mem_alloc(sizeof(ui_anim_user_data_t));

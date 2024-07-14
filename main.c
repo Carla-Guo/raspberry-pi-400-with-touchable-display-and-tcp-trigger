@@ -17,6 +17,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
 
 #ifdef __arm__ // 编译时检测是否为ARM架构，即树莓派
 #include <pigpio.h>
@@ -58,6 +61,9 @@ static void hal_init(void);
  *      DEFINES
  *********************/
 
+#define SERVER_IP "127.0.0.1"
+#define SERVER_PORT 8080
+#define BUFFER_SIZE 1024
 /**********************
  *      TYPEDEFS
  **********************/
@@ -65,7 +71,12 @@ static void hal_init(void);
 /**********************
  *      VARIABLES
  **********************/
- 
+int clientSocket;
+struct sockaddr_in serverAddr;
+char buffer[BUFFER_SIZE];
+
+
+    //鸡汤语录
 const char *random_values[100] = {
     "Reading is to the mind what exercise is to the body. - Joseph Addison",
     "A room without books is like a body without a soul. - Marcus Tullius Cicero",
@@ -121,7 +132,7 @@ const char *random_values[100] = {
     "Reading is the gateway skill that makes all other learning possible. - Barack Obama",
     "Books are the mirrors of the soul. - Virginia Woolf",
     "Reading brings us unknown friends. - Honoré de Balzac",
-    "Books are the ultimate Dumpees: put them down and they’ll wait for you forever; pay attention to them and they always love you back. - John Green",
+    "Books are the ultimate Dumpees: put them down and they'll wait for you forever; pay attention to them and they always love you back. - John Green",
     "Reading is a discount ticket to everywhere. - Mary Schmich",
     "Books can be dangerous. The best ones should be labeled 'This could change your life.' - Helen Exley",
     "Today a reader, tomorrow a leader. - Margaret Fuller",
@@ -176,12 +187,12 @@ const char *random_values[100] = {
 /**********************
  *   GLOBAL FUNCTIONS
  **********************/
-
+    //随机选中一条鸡汤语录
 int get_random_index() {
     return rand() % 100;
 }
 
-
+    //播放动画
 void play_animations() {
 
     // Get two random values from the array
@@ -190,26 +201,26 @@ void play_animations() {
     const char *random_value1 = random_values[random_index1];
     //const char *random_value2 = random_values[random_index2];
 
-    // Update the text area with the first random value
+    // Update the text area with the first random value，更改显示语句
     lv_textarea_set_text(ui_Textarera, random_value1);
-    // Update thw image with emoj3
+    // Update thw image with emoj3，更改表情
     lv_img_set_src(ui_Image1, &ui_img_emoj3_png);
-    // Run animation1
+    // Run animation1，播放鸡汤动画
     word_Animation(ui_Screen1,0);
 
-    // Check if the values match
+    // Check if the values match，如果中奖
     if (random_index1 == random_index2) {
       
-      // Update the image with the emoj2
+      // Update the image with the emoj2，更改表情，更改显示语句为celebration
       lv_img_set_src(ui_Image1, &ui_img_emoj2_png);
       lv_textarea_set_text(ui_Textarera, "\nCELEBRATIONS!");
-      // Run animation2
+      // Run animation2，播放中奖动画
       emoji_Animation(ui_Image1,0);
     }
 
 
     usleep(5000000);
-    // Restore the text area and the image
+    // Restore the text area and the image，回归初始页面
     lv_textarea_set_text(ui_Textarera, "\nPRESS IT!");
     lv_img_set_src(ui_Image1, &ui_img_emoj1_png);
 }
@@ -254,10 +265,88 @@ void uart_interrupt() {
 }
 #endif
 
+
+
+int tcpclient_init(){
+     int clientSocket;
+    struct sockaddr_in serverAddr;
+    char buffer[BUFFER_SIZE];
+
+    // 创建客户端套接字
+    clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (clientSocket == -1) {
+        perror("Failed to create socket");
+        exit(EXIT_FAILURE);
+    }
+
+    // 设置服务器地址信息
+    memset(&serverAddr, 0, sizeof(serverAddr));
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(SERVER_PORT);
+    if (inet_pton(AF_INET, SERVER_IP, &(serverAddr.sin_addr)) <=
+
+ 0) {
+        perror("Failed to set server IP");
+        exit(EXIT_FAILURE);
+    }
+
+    // 连接到服务器
+    if (connect(clientSocket, (struct sockaddr *)&serverAddr, sizeof(serverAddr)) == -1) {
+        perror("Failed to connect to server");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Connected to server %s:%d\n", SERVER_IP, SERVER_PORT);
+        // 发送数据
+    strcpy(buffer, "Hello, Server!");
+    if (send(clientSocket, buffer, strlen(buffer), 0) == -1) {
+        perror("Failed to send data");
+        exit(EXIT_FAILURE);
+    }
+
+    // 接收响应
+    memset(buffer, 0, sizeof(buffer));
+    if (recv(clientSocket, buffer, BUFFER_SIZE, 0) == -1) {
+        perror("Failed to receive data");
+        exit(EXIT_FAILURE);
+    }
+  return 0;
+}
+int tcpclient(const char * text){
+
+    // 发送数据
+    strcpy(buffer, text);
+    if (send(clientSocket, buffer, strlen(buffer), 0) == -1) {
+        perror("Failed to send data");
+        exit(EXIT_FAILURE);
+    }
+
+    // 接收响应
+    memset(buffer, 0, sizeof(buffer));
+    if (recv(clientSocket, buffer, BUFFER_SIZE, 0) == -1) {
+        perror("Failed to receive data");
+        exit(EXIT_FAILURE);
+    }
+
+    printf("Server response: %s\n", buffer);
+
+    return 0;
+}
+
+int close_tcpclient(){
+    // 关闭套接字
+    close(clientSocket);
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
+  
   (void)argc; /*Unused*/
   (void)argv; /*Unused*/
+
+  tcpxlient_init();
 
   /*Initialize LVGL*/
   lv_init();
@@ -267,9 +356,17 @@ int main(int argc, char **argv)
 
   ui_init();
 
-  #ifdef __arm__
-  uart_interrupt();
-  #endif
+#ifdef __arm__
+uart_interrupt();
+#endif
+
+
+
+
+//  close_tcpclient();
+
+  
+
 
   while(1) {
       /* Periodically call the lv_task handler.
@@ -310,7 +407,8 @@ static void hal_init(void)
   /* Add a mouse as input device */
   static lv_indev_drv_t indev_drv;
   lv_indev_drv_init(&indev_drv); /*Basic initialization*/
+
   indev_drv.type = LV_INDEV_TYPE_POINTER;
-  indev_drv.read_cb = sdl_mouse_read;
+  indev_drv.read_cb = evdev_read;
   lv_indev_drv_register(&indev_drv);
 }

@@ -1,5 +1,14 @@
 {
     "cmake.configureOnOpen": true,
     "cmake.buildDirectory" : "${workspaceFolder}/build",
-    "cmake.preferredGenerators" : ["Unix Makefiles","MinGW Makefiles"],
+    "cmake.preferredGenerators": [
+        "Unix Makefiles",
+        "MinGW Makefiles"
+    ],
+    "files.associations": {
+        "**/frontmatter.json": "jsonc",
+        "**/.frontmatter/config/*.json": "jsonc",
+        "evdev.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled",
 }
